@@ -1,0 +1,49 @@
+// Generated source. DO NOT EDIT
+package {{ .PackageName }}
+
+import (
+  {{ .Imports }}
+)
+
+type basicScanner struct {
+  dest any
+}
+
+func (s basicScanner) Scan(src any) error {
+  return modelg.ConvertAssign(s.dest, src)
+}
+
+type basicValuer struct {
+  src any
+}
+
+func (v basicValuer) Value() (driver.Value, error) {
+  return driver.DefaultParameterConverter.ConvertValue(v.src)
+}
+
+var modelTableInfos = make(map[string]*modelg.ModelMetadata)
+
+func registerModelTableInfo(tableName, displayName, pluralDisplayName string, fieldDisplayNames ...string) {
+  if len(fieldDisplayNames)%2 != 0 {
+    panic("fieldDisplayNames must be in pairs of dbName and displayName")
+  }
+
+  info := &modelg.ModelMetadata{
+    TableName:         tableName,
+    DisplayName:       displayName,
+    PluralDisplayName: pluralDisplayName,
+    FieldDisplayNames: make(map[string]string),
+  }
+
+  for i := 0; i < len(fieldDisplayNames); i += 2 {
+    dbName := fieldDisplayNames[i]
+    displayName := fieldDisplayNames[i+1]
+    info.FieldDisplayNames[dbName] = displayName
+  }
+
+  modelTableInfos[tableName] = info
+}
+
+func GetModelMetadataForTable(tableName string) *modelg.ModelMetadata {
+  return modelTableInfos[tableName]
+}

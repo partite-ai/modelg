@@ -1,0 +1,31 @@
+// Generated source. DO NOT EDIT
+package {{ .PackageName }}
+
+import (
+  {{ .Imports }}
+)
+
+{{ if .GenerateCreateParams }}
+type {{ .ModelName }}CreateParams struct {
+{{ range .CreateFields }}	 {{ .Name }} {{ .Type }} {{.Tag}}
+{{ end }}
+}
+{{ end }}
+
+{{ if .GenerateUpdateParams }}
+type {{ .ModelName }}UpdateParams struct {
+{{ range .UpdateFields }}	{{ .Name }} {{ .Type }} {{.Tag}}
+{{ end }}
+}
+{{ end }}
+
+func init() {
+  registerModelTableInfo(
+    "{{ .TableName }}",
+    "{{ .DisplayName }}",
+    "{{ .PluralDisplayName }}",
+    {{ range $dbName, $displayName := .FieldDisplayNames }}
+    "{{ $dbName }}", "{{ $displayName }}",
+    {{ end }}
+  )
+}

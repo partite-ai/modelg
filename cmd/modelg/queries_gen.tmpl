@@ -1,0 +1,182 @@
+// Generated source. DO NOT EDIT
+package {{ .PackageName }}
+
+import (
+  {{ .Imports }}
+)
+
+// sometimes required, sometimes not, avoid a compile error
+var _ = strings.Contains
+var _ = fmt.Errorf
+
+type {{ .ModelName }}Queries struct {
+  *generated{{ .ModelName }}Queries
+}
+
+{{ $modelName := .ModelName }}
+
+func New{{ .ModelName }}Queries(db modelg.DB) {{ .ModelName }}Queries {
+  return {{ $modelName }}Queries{&generated{{ $modelName }}Queries{db}}
+}
+
+type generated{{ $modelName }}Queries struct {
+  db modelg.DB
+}
+
+func (q *generated{{ $modelName }}Queries) getDb() modelg.DB {
+  return q.db
+}
+
+{{ $queryInterfaces := .QueryInterfaces }}
+{{ range $queryInterfaces }}
+var _ {{ . }} = (*generated{{ $modelName }}Queries)(nil)
+{{ end }}
+
+{{ range .Queries }}
+func (q *generated{{ $modelName }}Queries) {{ .Name }}({{ .Args }}) ({{ .Returns }}) {
+  var sqlText__ string
+  vars__ := q.db.CreateVariablesScope()
+
+  {{ .QueryInit }}
+
+  {{ if eq .QueryType "get" }}
+    {{ .RowType.InitExpr }}
+
+    rowIter__ := q.db.Query(ctx, sqlText__, vars__.QueryArguments()...)
+
+    {{ range .RowType.ScanTargets }}
+    {{ .PrepareExpr }}
+    {{ end }}
+
+    var targets__ []any
+
+    for row__, err__ := range rowIter__ {
+      if err__ != nil {
+        return {{ .RowType.ReturnExpr }}, err__
+      }
+
+      if targets__ == nil {
+        {{ if eq .RowType.ScanMode "names"}}
+        cols__, err__ := row__.Columns()
+        if err__ != nil {
+          return {{ .RowType.ReturnExpr }}, err__
+        }
+
+        targets__ = make([]any, len(cols__))
+        for i__, colName__ := range cols__ {
+          switch colName__ {
+          {{ range .RowType.ScanTargets }}
+          case "{{ .ColumnName }}":
+            targets__[i__] = {{ .TargetExpr }}
+          {{ end }}
+          default:
+            if !strings.HasPrefix(colName__, "$$") {
+              return {{ .RowType.ReturnExpr }}, fmt.Errorf("unexpected column %s", colName__)
+            }
+            contextVarTarget__ := modelg.ContextVarsFromContext(ctx).GetScanTarget(colName__[2:])
+            if contextVarTarget__ == nil {
+              var dummy any
+              contextVarTarget__ = &dummy
+            }
+            targets__[i__] = contextVarTarget__
+          }
+        }
+        {{ end }}
+
+        {{ if eq .RowType.ScanMode "positions"}}
+        targets__ = []any{
+          {{ range .RowType.ScanTargets }}
+          {{ .TargetExpr }},
+          {{ end }}
+        }
+        {{ end }}
+      }
+
+      if err := row__.Scan(targets__...); err != nil {
+        return {{ .RowType.ReturnExpr }}, err
+      }
+      return {{ .RowType.ReturnExpr }}, nil
+    }
+
+    return {{ .RowType.ReturnExpr }}, sql.ErrNoRows
+  {{ end }}
+
+  {{ if eq .QueryType "list" }}
+    var allRows__ {{ .RowType.CollectionType }}
+
+    rowItr__ := q.db.Query(ctx, sqlText__, vars__.QueryArguments()...)
+
+    var targets__ []any
+    for row__, err__ := range rowItr__ {
+      if err__ != nil {
+        return nil, err__
+      }
+      
+      {{ if eq .RowType.ScanMode "names"}}
+      cols__, err__ := row__.Columns()
+      if err__ != nil {
+        return nil, err__
+      }
+      if targets__ == nil {
+        targets__ = make([]any, len(cols__))
+      }
+      {{ end }}
+      
+      {{ .RowType.InitExpr }}
+
+      {{ range .RowType.ScanTargets }}
+      {{ .PrepareExpr }}
+      {{ end }}
+
+      {{ if eq .RowType.ScanMode "names"}}
+      for i__, colName__ := range cols__ {
+        switch colName__ {
+        {{ range .RowType.ScanTargets }}
+        case "{{ .ColumnName }}":
+          targets__[i__] = {{ .TargetExpr }}
+        {{ end }}
+        default:
+          if !strings.HasPrefix(colName__, "$$") {
+            return nil, fmt.Errorf("unexpected column %s", colName__)
+          }
+          contextVarTarget__ := modelg.ContextVarsFromContext(ctx).GetScanTarget(colName__[2:])
+          if contextVarTarget__ == nil {
+            var dummy any
+            contextVarTarget__ = &dummy
+          }
+          targets__[i__] = contextVarTarget__
+        }
+      }
+      {{ end }}
+
+      {{ if eq .RowType.ScanMode "positions"}}
+      targets__ = []any{
+        {{ range .RowType.ScanTargets }}
+        {{ .TargetExpr }},
+        {{ end }}
+      }
+      {{ end }}
+
+      if err := row__.Scan(targets__...); err != nil {
+        return nil, err
+      }
+
+      allRows__ = append(allRows__, {{ .RowType.ReturnExpr }})
+      
+    }
+
+    return allRows__, nil
+  {{ end }}
+
+  {{ if eq .QueryType "exec" }}
+  _, err__ := q.db.Exec(ctx, sqlText__, vars__.QueryArguments()...)
+  return err__
+  {{ end }}
+
+  {{ if eq .QueryType "execresult" }}
+  result__, err__ := q.db.Exec(ctx, sqlText__, vars__.QueryArguments()...)
+  return result__, err__
+  {{ end }}
+  
+}
+{{ end }}
