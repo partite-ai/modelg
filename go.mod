@@ -7,6 +7,7 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jackc/pgx/v5 v5.7.5
+	github.com/partite-ai/optional v0.0.0-20250718071013-64c3049d1d85
 	golang.org/x/text v0.27.0
 	golang.org/x/tools v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
