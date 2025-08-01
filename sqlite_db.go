@@ -25,7 +25,7 @@ type SqliteDB struct {
 
 var _ TxDB = (*SqliteDB)(nil)
 
-func NewSqliteDB(pool *sqlitex.Pool) *SqliteDB {
+func NewSqliteDB(pool SqlitePool) *SqliteDB {
 	return &SqliteDB{
 		pool: pool,
 	}
