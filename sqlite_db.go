@@ -95,7 +95,7 @@ func (db *SqliteDB) Begin(ctx context.Context, txOpts *TxOpts) (Tx, error) {
 	}
 
 	inited = true
-	return &sqliteTx{
+	return &SqliteTx{
 		conn: conn,
 		db:   db,
 	}, nil
@@ -153,12 +153,16 @@ func (db *SqliteDB) prepareStatement(conn *sqlite.Conn, query string, args ...an
 	return stmt, nil
 }
 
-type sqliteTx struct {
+type SqliteTx struct {
 	db   *SqliteDB
 	conn *sqlite.Conn
 }
 
-func (tx *sqliteTx) Exec(ctx context.Context, query string, args ...any) (Result, error) {
+func (tx *SqliteTx) Conn() *sqlite.Conn {
+	return tx.conn
+}
+
+func (tx *SqliteTx) Exec(ctx context.Context, query string, args ...any) (Result, error) {
 	oldInterrupt := tx.conn.SetInterrupt(ctx.Done())
 	defer func() {
 		tx.conn.SetInterrupt(oldInterrupt)
@@ -195,7 +199,7 @@ func (tx *sqliteTx) Exec(ctx context.Context, query string, args ...any) (Result
 	return sqliteResult{lastInsertID: lastInsertID, rowsAffected: int64(changeCount)}, nil
 }
 
-func (tx *sqliteTx) Query(ctx context.Context, query string, args ...any) iter.Seq2[Row, error] {
+func (tx *SqliteTx) Query(ctx context.Context, query string, args ...any) iter.Seq2[Row, error] {
 	return func(yield func(Row, error) bool) {
 		oldInterrupt := tx.conn.SetInterrupt(ctx.Done())
 		defer func() {
@@ -239,7 +243,7 @@ func (tx *sqliteTx) Query(ctx context.Context, query string, args ...any) iter.S
 	}
 }
 
-func (t *sqliteTx) Commit(ctx context.Context) error {
+func (t *SqliteTx) Commit(ctx context.Context) error {
 	err := sqlitex.Execute(t.conn, "COMMIT;", nil)
 	if err != nil {
 		return err
@@ -249,7 +253,7 @@ func (t *sqliteTx) Commit(ctx context.Context) error {
 	return nil
 }
 
-func (t *sqliteTx) Rollback(ctx context.Context) error {
+func (t *SqliteTx) Rollback(ctx context.Context) error {
 	if t.conn == nil {
 		return nil
 	}
