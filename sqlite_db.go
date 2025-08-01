@@ -31,8 +31,8 @@ func NewSqliteDB(pool SqlitePool) *SqliteDB {
 	}
 }
 
-func (db *SqliteDB) Raw() any {
-	return db.pool
+func (db *SqliteDB) Unwrap(target any) bool {
+	return unwrapOrDelegrate(db.pool, target)
 }
 
 func (db *SqliteDB) Exec(ctx context.Context, query string, args ...any) (Result, error) {
@@ -158,8 +158,13 @@ type SqliteTx struct {
 	conn *sqlite.Conn
 }
 
-func (tx *SqliteTx) Conn() *sqlite.Conn {
-	return tx.conn
+func (tx *SqliteTx) Unwrap(target any) bool {
+	switch t := target.(type) {
+	case **sqlite.Conn:
+		*t = tx.conn
+		return true
+	}
+	return false
 }
 
 func (tx *SqliteTx) Exec(ctx context.Context, query string, args ...any) (Result, error) {

@@ -114,8 +114,8 @@ func NewErrorTranslatingDB(underlyingDB DB, translateError ErrorTranslator) *Err
 	}
 }
 
-func (db *ErrorTranslatingDB) Raw() any {
-	return db.DB
+func (db *ErrorTranslatingDB) Unwrap(target any) bool {
+	return unwrapOrDelegrate(db.DB, target)
 }
 
 func (db *ErrorTranslatingDB) Exec(ctx context.Context, query string, args ...any) (Result, error) {
@@ -164,6 +164,10 @@ func (db *ErrorTranslatingTxDB) Begin(ctx context.Context, opts *TxOpts) (Tx, er
 type ErrorTranslatingTx struct {
 	tx             Tx
 	translateError ErrorTranslator
+}
+
+func (db *ErrorTranslatingTx) Unwrap(target any) bool {
+	return unwrapOrDelegrate(db.tx, target)
 }
 
 func (tx *ErrorTranslatingTx) Exec(ctx context.Context, query string, args ...any) (Result, error) {

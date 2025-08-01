@@ -31,8 +31,8 @@ func NewPgxDB(pool PgxPool) *PgxDB {
 	}
 }
 
-func (db *PgxDB) Raw() any {
-	return db.pool
+func (db *PgxDB) Unwrap(target any) bool {
+	return unwrapOrDelegrate(db.pool, target)
 }
 
 func (db *PgxDB) Begin(ctx context.Context, opts *TxOpts) (Tx, error) {
@@ -97,6 +97,15 @@ func (db *PgxDB) CreateVariablesScope() QueryVariablesScope {
 type pgxTx struct {
 	db   *PgxDB
 	conn pgx.Tx
+}
+
+func (t *pgxTx) Unwrap(target any) bool {
+	switch tgt := target.(type) {
+	case *pgx.Tx:
+		*tgt = t.conn
+		return true
+	}
+	return false
 }
 
 func (t *pgxTx) Exec(ctx context.Context, query string, args ...any) (Result, error) {
