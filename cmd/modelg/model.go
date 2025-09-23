@@ -131,6 +131,9 @@ func LoadModelInfo(model string, typ *types.Struct, imports *importSet) (*modelI
 			case *types.Named:
 				pkType.PackagePath = typ.Obj().Pkg().Path()
 				pkType.TypeName = typ.Obj().Name()
+			case *types.Alias:
+				pkType.PackagePath = typ.Obj().Pkg().Path()
+				pkType.TypeName = typ.Obj().Name()
 			default:
 				pkType.TypeName = types.TypeString(field.Type(), imports.resolvePackageAlias)
 			}
