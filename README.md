@@ -304,10 +304,139 @@ SELECT * FROM users WHERE id = :id;
 ### Parameter Types
 
 - **Named Parameters:** `:parameter_name` - Bound as query parameters
-- **Literal Parameters:** `:parameter_name!` - Written directly into SQL
-- **Mode Parameters:** `:parameter_name!mode` - Calls `parameter.SQLText(mode)`
+- **Literal Parameters:** `:parameter_name!` - Written directly into SQL (requires SQLText method)
+- **Mode Parameters:** `:parameter_name!mode` - Calls `parameter.SQLText(mode)` and writes result into SQL
+
+### Literal Parameters and SQLText Method
+
+The `!` suffix after a parameter name tells ModelG to call the parameter's `SQLText` method and write the returned text directly into the SQL query instead of binding it as a parameter. This is useful for dynamic SQL generation where parts of the query structure need to change based on parameter values.
+
+**Requirements:**
+
+- The parameter type must implement a `SQLText(mode string) string` method
+- The `SQLText` method must return SQL-injection-safe text
+- Only use with trusted, validated input
+
+**Basic Literal Parameter:**
+
+```sql
+-- name: FindUsers
+SELECT * FROM users
+ORDER BY :order_by! :direction!
+LIMIT :limit;
+```
+
+```go
+type SortDirection string
+
+func (sd SortDirection) SQLText(mode string) string {
+    switch sd {
+    case "asc":
+        return "ASC"
+    case "desc":
+        return "DESC"
+    default:
+        return "ASC" // safe default
+    }
+}
+
+type UserOrderBy string
+
+func (uo UserOrderBy) SQLText(mode string) string {
+    switch uo {
+    case "name":
+        return "name"
+    case "created_at":
+        return "created_at"
+    case "email":
+        return "email"
+    default:
+        return "id" // safe default
+    }
+}
+
+// Usage
+FindUsers(ctx, UserOrderBy("name"), SortDirection("desc"), 10)
+// Generates: SELECT * FROM users ORDER BY name DESC LIMIT ?
+```
+
+**Mode Parameters:**
+
+Use `:parameter!mode` to pass a mode string to the `SQLText` method, allowing different SQL text generation based on context:
+
+```sql
+-- name: FindUsers
+SELECT * FROM users
+WHERE :filter!where
+ORDER BY :order_by!order :direction!
+LIMIT :limit;
+```
+
+```go
+type UserFilter struct {
+    Status string
+    MinAge int
+}
+
+func (uf UserFilter) SQLText(mode string) string {
+    switch mode {
+    case "where":
+        var conditions []string
+        if uf.Status != "" {
+            conditions = append(conditions, "status = '"+uf.Status+"'") // NOTE: This is just an example - use proper escaping
+        }
+        if uf.MinAge > 0 {
+            conditions = append(conditions, fmt.Sprintf("age >= %d", uf.MinAge))
+        }
+        if len(conditions) == 0 {
+            return "1=1" // no filter
+        }
+        return strings.Join(conditions, " AND ")
+    case "having":
+        // Different logic for HAVING clauses
+        return "COUNT(*) > 0"
+    default:
+        return "1=1"
+    }
+}
+
+type UserOrderBy string
+
+func (uo UserOrderBy) SQLText(mode string) string {
+    switch mode {
+    case "order":
+        switch uo {
+        case "name":
+            return "name"
+        case "created_at":
+            return "created_at"
+        default:
+            return "id"
+        }
+    case "group":
+        // Different column names for GROUP BY
+        switch uo {
+        case "name":
+            return "u.name"
+        default:
+            return "u.id"
+        }
+    default:
+        return "id"
+    }
+}
+```
+
+### Safety Considerations:
+
+- Always validate and sanitize inputs in `SQLText` methods
+- Use allowlists for dynamic table/column names
+- Never directly interpolate user input without validation
+- Consider using bound parameters (`:param`) when possible instead of literal parameters
 
 ### Conditional Syntax
+
+Conditional directives control when parts of the SQL query are included based on parameter values:
 
 ```sql
 -- name: UpdateUser
@@ -328,13 +457,20 @@ RETURNING *;
 - `--<when $EXPR` / `--endwhen` - Same as `--when`, but removes entire line when false
 - `--+when $EXPR` - Include content only if previous block rendered AND expression is true
 
-### Parameter Mapping
+**Combining SQLText and Conditionals:**
 
-SQL named parameters must map to Go method parameters or struct fields:
+```sql
+-- name: SearchUsers
+SELECT * FROM users
+WHERE --<when :filter.HasConditions
+    :filter!where
+    AND --+when :status.IsSet
+    status = :status
+--endwhen
+ORDER BY :order_by! :direction!;
+```
 
-- `:name` → `Name` field
-- `:user_id` → `UserID` field (snake_case → PascalCase)
-- `:new_email` → `NewEmail` field in parameter struct
+This example uses both conditional logic (to include/exclude the WHERE clause) and SQLText mode (to generate dynamic filter conditions and ordering).
 
 ## Configuration
 
