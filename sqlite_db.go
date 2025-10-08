@@ -505,6 +505,8 @@ func (db *SqliteDB) translateError(err error) error {
 		case sqlite.ResultConstraintTrigger:
 			if strings.Contains(baseErr.Error(), "FOREIGN KEY constraint failed") {
 				return NewForeignKeyConstraintError(err, "", "", "")
+			} else if strings.HasPrefix(baseErr.Error(), "constraint failed: ") {
+				return NewCheckConstraintError(err, baseErr.Error()[len("constraint failed: "):])
 			}
 		}
 	}
