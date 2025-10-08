@@ -120,6 +120,7 @@ func (t *pgxTx) Query(ctx context.Context, query string, args ...any) iter.Seq2[
 
 func (t *pgxTx) Commit(ctx context.Context) error {
 	if err := t.conn.Commit(ctx); err != nil {
+		err = t.db.translateError(ctx, err)
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
