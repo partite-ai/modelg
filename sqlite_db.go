@@ -254,7 +254,7 @@ func (t *SqliteTx) BeginNested(ctx context.Context) (Tx, error) {
 	t.childCount++
 	childID := t.childCount
 	parent := t.savepoint
-	if parent != "" {
+	if parent == "" {
 		parent = "root"
 	}
 	savepointID := fmt.Sprintf("%s_%d", parent, childID)
