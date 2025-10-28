@@ -20,6 +20,7 @@ type TxDB interface {
 type Tx interface {
 	Exec(ctx context.Context, query string, args ...any) (Result, error)
 	Query(ctx context.Context, query string, args ...any) iter.Seq2[Row, error]
+	BeginNested(ctx context.Context) (Tx, error)
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

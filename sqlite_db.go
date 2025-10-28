@@ -154,8 +154,10 @@ func (db *SqliteDB) prepareStatement(conn *sqlite.Conn, query string, args ...an
 }
 
 type SqliteTx struct {
-	db   *SqliteDB
-	conn *sqlite.Conn
+	db         *SqliteDB
+	conn       *sqlite.Conn
+	savepoint  string
+	childCount int
 }
 
 func (tx *SqliteTx) Unwrap(target any) bool {
@@ -248,7 +250,36 @@ func (tx *SqliteTx) Query(ctx context.Context, query string, args ...any) iter.S
 	}
 }
 
+func (t *SqliteTx) BeginNested(ctx context.Context) (Tx, error) {
+	t.childCount++
+	childID := t.childCount
+	parent := t.savepoint
+	if parent != "" {
+		parent = "root"
+	}
+	savepointID := fmt.Sprintf("%s_%d", parent, childID)
+
+	err := sqlitex.Execute(t.conn, "SAVEPOINT "+savepointID+";", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin nested transaction: %w", err)
+	}
+	return &SqliteTx{
+		db:        t.db,
+		conn:      t.conn,
+		savepoint: savepointID,
+	}, nil
+}
+
 func (t *SqliteTx) Commit(ctx context.Context) error {
+	if t.savepoint != "" {
+		// If this is a nested transaction, just release the savepoint.
+		err := sqlitex.Execute(t.conn, "RELEASE SAVEPOINT "+t.savepoint+";", nil)
+		if err != nil {
+			return fmt.Errorf("failed to commit nested transaction: %w", err)
+		}
+		return nil
+	}
+
 	err := sqlitex.Execute(t.conn, "COMMIT;", nil)
 	if err != nil {
 		return err
@@ -260,6 +291,17 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	if t.conn == nil {
+		return nil
+	}
+
+	if t.savepoint != "" {
+		// If this is a nested transaction, rollback to the savepoint, but keep
+		// the connection open.
+		err := sqlitex.Execute(t.conn, "ROLLBACK TO "+t.savepoint+";", nil)
+		if err != nil {
+			return err
+		}
+		t.conn = nil
 		return nil
 	}
 

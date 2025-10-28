@@ -118,6 +118,17 @@ func (t *pgxTx) Query(ctx context.Context, query string, args ...any) iter.Seq2[
 	}, query, args...)
 }
 
+func (t *pgxTx) BeginNested(ctx context.Context) (Tx, error) {
+	nestedTx, err := t.conn.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxTx{
+		db:   t.db,
+		conn: nestedTx,
+	}, nil
+}
+
 func (t *pgxTx) Commit(ctx context.Context) error {
 	if err := t.conn.Commit(ctx); err != nil {
 		err = t.db.translateError(ctx, err)

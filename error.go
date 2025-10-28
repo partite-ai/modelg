@@ -190,6 +190,17 @@ func (tx *ErrorTranslatingTx) Query(ctx context.Context, query string, args ...a
 	}
 }
 
+func (tx *ErrorTranslatingTx) BeginNested(ctx context.Context) (Tx, error) {
+	nestedTx, err := tx.tx.BeginNested(ctx)
+	if err != nil {
+		return nil, tx.translateError(err)
+	}
+	return &ErrorTranslatingTx{
+		tx:             nestedTx,
+		translateError: tx.translateError,
+	}, nil
+}
+
 func (tx *ErrorTranslatingTx) Commit(ctx context.Context) error {
 	if err := tx.tx.Commit(ctx); err != nil {
 		return tx.translateError(err)
