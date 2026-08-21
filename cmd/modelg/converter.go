@@ -14,9 +14,11 @@ type converterInfo struct {
 	Name        string
 	ScannerFunc types.Object
 	ValuerFunc  types.Object
+	TexterFunc  types.Object
+	PackageMap  map[string]*packages.Package
 }
 
-func (ci *converterInfo) loadScannerFunction(pkgMap map[string]*packages.Package, name string) error {
+func (ci *converterInfo) loadScannerFunction(name string) error {
 	lastDot := strings.LastIndex(name, ".")
 	if lastDot == -1 || lastDot == len(name)-1 {
 		return fmt.Errorf("invalid scanner function %q", name)
@@ -24,7 +26,7 @@ func (ci *converterInfo) loadScannerFunction(pkgMap map[string]*packages.Package
 	pkgName := name[:lastDot]
 	funcName := name[lastDot+1:]
 
-	pkg := pkgMap[pkgName]
+	pkg := ci.PackageMap[pkgName]
 	obj := pkg.Types.Scope().Lookup(funcName)
 
 	scannerFunc, ok := obj.Type().Underlying().(*types.Signature)
@@ -67,7 +69,7 @@ func (ci *converterInfo) loadScannerFunction(pkgMap map[string]*packages.Package
 	return nil
 }
 
-func (ci *converterInfo) loadValuerFunction(pkgMap map[string]*packages.Package, name string) error {
+func (ci *converterInfo) loadValuerFunction(name string) error {
 	lastDot := strings.LastIndex(name, ".")
 	if lastDot == -1 || lastDot == len(name)-1 {
 		return fmt.Errorf("invalid valuer function %q", name)
@@ -75,7 +77,7 @@ func (ci *converterInfo) loadValuerFunction(pkgMap map[string]*packages.Package,
 	pkgName := name[:lastDot]
 	funcName := name[lastDot+1:]
 
-	pkg := pkgMap[pkgName]
+	pkg := ci.PackageMap[pkgName]
 	obj := pkg.Types.Scope().Lookup(funcName)
 
 	valuerFunc, ok := obj.Type().Underlying().(*types.Signature)
@@ -104,6 +106,46 @@ func (ci *converterInfo) loadValuerFunction(pkgMap map[string]*packages.Package,
 	}
 
 	ci.ValuerFunc = obj
+	return nil
+}
+
+func (ci *converterInfo) loadTexterFunction(name string) error {
+	lastDot := strings.LastIndex(name, ".")
+	if lastDot == -1 || lastDot == len(name)-1 {
+		return fmt.Errorf("invalid valuer function %q", name)
+	}
+	pkgName := name[:lastDot]
+	funcName := name[lastDot+1:]
+
+	pkg := ci.PackageMap[pkgName]
+	obj := pkg.Types.Scope().Lookup(funcName)
+
+	texterFunc, ok := obj.Type().Underlying().(*types.Signature)
+	if !ok {
+		return fmt.Errorf("texter function %q is not a function", name)
+	}
+
+	if texterFunc.Params().Len() < 1 {
+		return fmt.Errorf("texter function %q must have at least one parameter", name)
+	}
+
+	for i := 1; i < texterFunc.Params().Len(); i++ {
+		param := texterFunc.Params().At(i)
+		paramSig, ok := param.Type().Underlying().(*types.Signature)
+		if !ok {
+			return fmt.Errorf("texter function %q, parameter %s is expected to be of the form func(T) modelg.SQLTexter", name, param.Name())
+		}
+
+		if paramSig.Params().Len() != 1 {
+			return fmt.Errorf("texter function %q, parameter %s is expected to be of the form func(T) modelg.SQLTexter", name, param.Name())
+		}
+	}
+
+	if texterFunc.Results().Len() != 1 {
+		return fmt.Errorf("texter function %q must have exactly one result", name)
+	}
+
+	ci.TexterFunc = obj
 	return nil
 }
 
@@ -288,6 +330,114 @@ func (ci *converterInfo) ValuerInvocation(qualifier types.Qualifier, converters 
 		}
 	}
 	callExpr += ")"
+	return callExpr, nil
+}
+
+func (ci *converterInfo) CanText(name string, typ types.Type) bool {
+	if ci.TexterFunc == nil {
+		return false
+	}
+
+	if ci.Name != name {
+		return false
+	}
+
+	texterFunc, ok := ci.TexterFunc.Type().Underlying().(*types.Signature)
+	if !ok {
+		return false
+	}
+
+	_, ok = typeutil.InferTypeFromFirstParam(texterFunc, typ)
+	return ok
+}
+
+func (ci *converterInfo) TexterInvocation(qualifier types.Qualifier, converters []converterInfo, typ types.Type, expr string) (string, error) {
+	texterFunc, ok := ci.TexterFunc.Type().Underlying().(*types.Signature)
+	if !ok {
+		return "", fmt.Errorf("texter function %s is not a function", ci.ValuerFunc.Name())
+	}
+
+	qName := ci.TexterFunc.Name()
+	pkgName := qualifier(ci.TexterFunc.Pkg())
+	if pkgName != "" {
+		qName = pkgName + "." + qName
+	}
+	instance, ok := typeutil.InferTypeFromFirstParam(texterFunc, typ)
+	if !ok {
+		return "", fmt.Errorf("could not infer type for texter function %s", ci.ValuerFunc.Name())
+	}
+
+	callExpr := qName + "(" + expr
+	for i := 1; i < instance.Params().Len(); i++ {
+		param := instance.Params().At(i)
+		paramSig, ok := param.Type().Underlying().(*types.Signature)
+		if !ok {
+			return "", fmt.Errorf("texter function %s has a non-signature parameter %s", ci.TexterFunc.Name(), param.Name())
+		}
+
+		if paramSig.Params().Len() != 1 {
+			return "", fmt.Errorf("texter function %s parameter %s is expected to be func(T) modelg.SQLTexter", ci.TexterFunc.Name(), param.Name())
+		}
+
+		p0 := paramSig.Params().At(0)
+
+		sigClone := types.NewSignatureType(
+			paramSig.Recv(),
+			vlistToSlice(paramSig.RecvTypeParams()),
+			vlistToSlice(paramSig.TypeParams()),
+			types.NewTuple(
+				types.NewVar(p0.Pos(), p0.Pkg(), "src__", p0.Type()),
+			),
+			paramSig.Results(),
+			paramSig.Variadic(),
+		)
+
+		paramTyp := paramSig.Params().At(0).Type()
+		found := false
+		for _, converter := range converters {
+			if converter.CanText("", paramTyp) {
+				var buf bytes.Buffer
+				types.WriteSignature(&buf, sigClone, qualifier)
+
+				invokeConverter, err := converter.TexterInvocation(qualifier, converters, paramTyp, "src__")
+				if err != nil {
+					return "", err
+				}
+				sigExpr := "func" + buf.String() + "{\n return " + invokeConverter + "\n}"
+				callExpr += ", " + sigExpr
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			sqlTexter1T := ci.PackageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SimpleSQLTexter")
+			sqlTexter2T := ci.PackageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SimpleModeSQLTexter")
+			sqlTexter3T := ci.PackageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SQLTexter")
+
+			var extractExpr string
+			if types.AssignableTo(paramTyp, sqlTexter1T.Type()) {
+				extractExpr = "modelg.SQLTexterForSimpleSQLTexter(src__)"
+			} else if types.AssignableTo(paramTyp, sqlTexter2T.Type()) {
+				extractExpr = "modelg.SQLTexterForSimpleModeSQLTexter(src__)"
+			} else if types.AssignableTo(paramTyp, sqlTexter3T.Type()) {
+				extractExpr = "src__"
+			}
+
+			if extractExpr != "" {
+				var buf bytes.Buffer
+				types.WriteSignature(&buf, sigClone, qualifier)
+				sigExpr := "func" + buf.String() + "{\n return " + extractExpr + "\n}"
+				callExpr += ", " + sigExpr
+				found = true
+			}
+		}
+
+		if !found {
+			return "", fmt.Errorf("no texter implementation found for type: %s", types.TypeString(paramTyp, nil))
+		}
+	}
+	callExpr += ").SQLText"
 	return callExpr, nil
 }
 

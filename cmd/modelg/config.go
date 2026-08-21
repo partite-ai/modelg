@@ -13,6 +13,7 @@ type Config struct {
 		Name    string `yaml:"name"`
 		Scanner string `yaml:"scanner"`
 		Valuer  string `yaml:"valuer"`
+		Texter  string `yaml:"texter"`
 	} `yaml:"converters"`
 }
 

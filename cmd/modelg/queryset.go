@@ -102,7 +102,7 @@ func (qs *QuerySet) HasMethod(name string) bool {
 	return ok
 }
 
-func (qs *QuerySet) CreateQueriesFile(pkg *packages.Package, model string, converters []converterInfo) error {
+func (qs *QuerySet) CreateQueriesFile(pkg *packages.Package, packageMap map[string]*packages.Package, model string, converters []converterInfo) error {
 	for name := range qs.queries {
 		_, hasMethod := qs.methods[name]
 		if !hasMethod {
@@ -122,6 +122,7 @@ func (qs *QuerySet) CreateQueriesFile(pkg *packages.Package, model string, conve
 		"context":                      "context",
 		"database/sql":                 "sql",
 		"strings":                      "strings",
+		"errors":                       "errors",
 		"github.com/partite-ai/modelg": "modelg",
 	})
 
@@ -196,6 +197,7 @@ func (qs *QuerySet) CreateQueriesFile(pkg *packages.Package, model string, conve
 			args:       sig.Params(),
 			converters: converters,
 			imports:    imports,
+			packageMap: packageMap,
 		}
 
 		lines, err := query.Apply(env)
@@ -368,9 +370,10 @@ type methodArgsQueryEnv struct {
 	args       *types.Tuple
 	converters []converterInfo
 	imports    *importSet
+	packageMap map[string]*packages.Package
 }
 
-func (env *methodArgsQueryEnv) ParamCodeExpr(parts []string) (string, error) {
+func (env *methodArgsQueryEnv) ParamCodeExpr(parts []string, forSQLText bool) (string, error) {
 	if len(parts) > 2 {
 		return "", fmt.Errorf("invalid name %q", strings.Join(parts, "."))
 	}
@@ -425,6 +428,7 @@ func (env *methodArgsQueryEnv) ParamCodeExpr(parts []string) (string, error) {
 		return "", fmt.Errorf("param %q not found", strings.Join(parts, "."))
 	}
 
+	resultType := paramType
 	if len(parts) == 2 {
 		// resolve the package
 		fieldOrMethod, _, _ := types.LookupFieldOrMethod(paramType, true, env.pkg, parts[1])
@@ -435,18 +439,50 @@ func (env *methodArgsQueryEnv) ParamCodeExpr(parts []string) (string, error) {
 		switch fm := fieldOrMethod.(type) {
 		case *types.Var:
 			paramExpr = append(paramExpr, parts[1])
+			resultType = fm.Type()
 		case *types.Func:
 			if fm.Signature().Params().Len() != 0 {
 				return "", fmt.Errorf("method %q should not have any parameters", parts[1])
 			}
+			if fm.Signature().Results().Len() != 1 {
+				return "", fmt.Errorf("method %q should have a single result", parts[1])
+			}
 			paramExpr = append(paramExpr, parts[1]+"()")
+			resultType = fm.Signature().Results().At(0).Type()
 		}
-	} else {
+	} else if !forSQLText {
 		for _, converter := range env.converters {
 			if converter.CanValue(converterName, paramType) {
 				return converter.ValuerInvocation(env.imports.resolvePackageAlias, env.converters, paramType, strings.Join(paramExpr, "."))
 			}
 		}
+	}
+
+	if forSQLText {
+		for _, converter := range env.converters {
+			if converter.CanText(converterName, resultType) {
+				return converter.TexterInvocation(env.imports.resolvePackageAlias, env.converters, paramType, strings.Join(paramExpr, "."))
+			}
+		}
+
+		sqlTexter1T := env.packageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SimpleSQLTexter")
+		sqlTexter2T := env.packageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SimpleModeSQLTexter")
+		sqlTexter3T := env.packageMap["github.com/partite-ai/modelg"].Types.Scope().Lookup("SQLTexter")
+
+		if types.AssignableTo(resultType, sqlTexter1T.Type()) {
+			return fmt.Sprintf("func (tctx *modelg.SQLTexterContext) (string, error){ return %s.SQLText(), nil }", strings.Join(paramExpr, ".")), nil
+		}
+
+		if types.AssignableTo(resultType, sqlTexter2T.Type()) {
+			return fmt.Sprintf("func (tctx *modelg.SQLTexterContext) (string, error){ return %s.SQLText(tctx.Mode), nil }", strings.Join(paramExpr, ".")), nil
+		}
+
+		if types.AssignableTo(resultType, sqlTexter3T.Type()) {
+			return strings.Join(paramExpr, ".") + ".SQLText", nil
+		}
+
+		return "", fmt.Errorf("valid SQLText method not found in %q", strings.Join(parts, "."))
+
 	}
 
 	return strings.Join(paramExpr, "."), nil

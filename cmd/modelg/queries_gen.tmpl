@@ -8,6 +8,7 @@ import (
 // sometimes required, sometimes not, avoid a compile error
 var _ = strings.Contains
 var _ = fmt.Errorf
+var _ = errors.Join
 
 type {{ .ModelName }}Queries struct {
   *generated{{ .ModelName }}Queries
@@ -36,11 +37,23 @@ var _ {{ . }} = (*generated{{ $modelName }}Queries)(nil)
 func (q *generated{{ $modelName }}Queries) {{ .Name }}({{ .Args }}) ({{ .Returns }}) {
   var sqlText__ string
   vars__ := q.db.CreateVariablesScope()
+  var queryBuildErrs__ []error
+  collectErr__ := func(s string, err error) string {
+    if err != nil {
+      queryBuildErrs__ = append(queryBuildErrs__, err)
+    }
+    return s
+  }
+  _ = collectErr__
 
   {{ .QueryInit }}
 
   {{ if eq .QueryType "get" }}
     {{ .RowType.InitExpr }}
+
+    if buildErr := errors.Join(queryBuildErrs__...); buildErr != nil {
+      return {{ .RowType.ReturnExpr }}, buildErr
+    }
 
     rowIter__ := q.db.Query(ctx, sqlText__, vars__.QueryArguments()...)
 
@@ -102,6 +115,10 @@ func (q *generated{{ $modelName }}Queries) {{ .Name }}({{ .Args }}) ({{ .Returns
   {{ end }}
 
   {{ if eq .QueryType "list" }}
+    if buildErr := errors.Join(queryBuildErrs__...); buildErr != nil {
+      return nil, buildErr
+    }
+
     var allRows__ {{ .RowType.CollectionType }}
 
     rowItr__ := q.db.Query(ctx, sqlText__, vars__.QueryArguments()...)
@@ -169,11 +186,17 @@ func (q *generated{{ $modelName }}Queries) {{ .Name }}({{ .Args }}) ({{ .Returns
   {{ end }}
 
   {{ if eq .QueryType "exec" }}
+  if buildErr := errors.Join(queryBuildErrs__...); buildErr != nil {
+    return buildErr
+  }
   _, err__ := q.db.Exec(ctx, sqlText__, vars__.QueryArguments()...)
   return err__
   {{ end }}
 
   {{ if eq .QueryType "execresult" }}
+  if buildErr := errors.Join(queryBuildErrs__...); buildErr != nil {
+    return nil, buildErr
+  }
   result__, err__ := q.db.Exec(ctx, sqlText__, vars__.QueryArguments()...)
   return result__, err__
   {{ end }}

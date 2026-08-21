@@ -6,7 +6,7 @@ import (
 )
 
 type QueryEnvironment interface {
-	ParamCodeExpr(path []string) (string, error)
+	ParamCodeExpr(path []string, forSQLText bool) (string, error)
 }
 
 type QueryNode interface {
@@ -43,17 +43,17 @@ type exprNode struct {
 
 func (n *exprNode) Apply(env QueryEnvironment) ([]string, error) {
 	if n.isLiteral {
-		paramCodeExpr, err := env.ParamCodeExpr(n.path)
+		paramCodeExpr, err := env.ParamCodeExpr(n.path, true)
 		if err != nil {
 			return nil, err
 		}
 
 		return []string{
-			fmt.Sprintf("sqlText__ += %s.SQLText(%q) + \" \"", paramCodeExpr, n.literalMode),
+			fmt.Sprintf("sqlText__ += collectErr__(%s(&modelg.SQLTexterContext{Context: ctx, Vars: vars__, Mode: %q})) + \" \"", paramCodeExpr, n.literalMode),
 		}, nil
 	}
 
-	paramCodeExpr, err := env.ParamCodeExpr(n.path)
+	paramCodeExpr, err := env.ParamCodeExpr(n.path, false)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ type whenNode struct {
 }
 
 func (w *whenNode) Apply(env QueryEnvironment) ([]string, error) {
-	conditionExpr, err := env.ParamCodeExpr(w.condition)
+	conditionExpr, err := env.ParamCodeExpr(w.condition, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get condition expression: %w", err)
 	}
@@ -117,7 +117,8 @@ func (w *joinWhenNode) Apply(env QueryEnvironment) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply prefix: %w", err)
 	}
-	conditionExpr, err := env.ParamCodeExpr(w.condition)
+
+	conditionExpr, err := env.ParamCodeExpr(w.condition, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get condition expression: %w", err)
 	}
@@ -149,7 +150,7 @@ func (w *chompWhenNode) Apply(env QueryEnvironment) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply prefix: %w", err)
 	}
-	conditionExpr, err := env.ParamCodeExpr(w.condition)
+	conditionExpr, err := env.ParamCodeExpr(w.condition, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get condition expression: %w", err)
 	}

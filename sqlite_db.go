@@ -443,18 +443,6 @@ func (r sqliteRow) Scan(dest ...any) error {
 
 		colType := r.stmt.ColumnType(i)
 
-		if _, ok := dest[i].(*time.Time); ok && colType == sqlite.TypeText {
-			data := r.stmt.ColumnText(i)
-			parsedTime, ok := parseSqliteTime(data)
-			if !ok {
-				return fmt.Errorf("failed to parse time from text column %d: %s", i, data)
-			}
-			if err := ConvertAssign(dest[i], parsedTime); err != nil {
-				return fmt.Errorf("failed to convert text column %d: %w", i, err)
-			}
-			continue
-		}
-
 		switch colType {
 		case sqlite.TypeBlob:
 			colLen := r.stmt.ColumnLen(i)
@@ -465,8 +453,34 @@ func (r sqliteRow) Scan(dest ...any) error {
 			}
 		case sqlite.TypeText:
 			data := r.stmt.ColumnText(i)
+			// Direct *time.Time target: parse and use the time.
+			// Other targets first try the raw string, then fall
+			// back to a parsed time on conversion failure — this
+			// covers Scanner-wrapped *time.Time (e.g.
+			// OptionalScanner[time.Time]) where the *time.Time
+			// type assertion below misses but the underlying
+			// target needs the parsed value. Strings that don't
+			// match a time format pass straight through, so a
+			// non-time text column scanned into *string is
+			// untouched.
+			if _, ok := dest[i].(*time.Time); ok {
+				parsed, ok := parseSqliteTime(data)
+				if !ok {
+					return fmt.Errorf("failed to parse time from text column %d: %s", i, data)
+				}
+				if err := ConvertAssign(dest[i], parsed); err != nil {
+					return fmt.Errorf("failed to convert text column %d: %w", i, err)
+				}
+				continue
+			}
 			if err := ConvertAssign(dest[i], data); err != nil {
-				return fmt.Errorf("failed to convert text column %d: %w", i, err)
+				parsed, parsedOK := parseSqliteTime(data)
+				if !parsedOK {
+					return fmt.Errorf("failed to convert text column %d: %w", i, err)
+				}
+				if err2 := ConvertAssign(dest[i], parsed); err2 != nil {
+					return fmt.Errorf("failed to convert text column %d (string and time both rejected): %w", i, err)
+				}
 			}
 		case sqlite.TypeInteger:
 			data := r.stmt.ColumnInt64(i)

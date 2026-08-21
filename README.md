@@ -313,9 +313,14 @@ The `!` suffix after a parameter name tells ModelG to call the parameter's `SQLT
 
 **Requirements:**
 
-- The parameter type must implement a `SQLText(mode string) string` method
+- The parameter type must implement a `SQLText` method, or have a texter converter registered.
 - The `SQLText` method must return SQL-injection-safe text
 - Only use with trusted, validated input
+
+`SQLText` methods must match one of three signatures:
+- `SQLText(mode string) string`
+- `SQLText() string`
+- `SQLText(*modelg.SQLTexterContext) (string, error)`
 
 **Basic Literal Parameter:**
 
@@ -518,6 +523,7 @@ converters:
 - `name` - Optional name for struct tag reference (`converter:json`)
 - `scanner` - Import path for constructor function returning `sql.Scanner`
 - `valuer` - Import path for constructor function returning `driver.Valuer`
+- `texter` - Import path for constructor function returning `modelg.SQLTexter` 
 
 ### Constructor Functions
 
@@ -525,6 +531,7 @@ converters:
 // Constructor function signatures
 func JSONScanner[T any](dest *T) sql.Scanner { ... }
 func JSONValuer[T any](src T) driver.Valuer { ... }
+func JSONTexter[T any](src T) modelg.SQLTexter { ... }
 ```
 
 ### Dependency Injection

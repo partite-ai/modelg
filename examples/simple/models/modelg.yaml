@@ -1,0 +1,7 @@
+models:
+  - name: Thing
+
+converters:
+  - scanner: github.com/partite-ai/modelg/examples/converters.OptionalScanner
+    valuer: github.com/partite-ai/modelg/examples/converters.OptionalValuer
+    texter: github.com/partite-ai/modelg/examples/converters.OptionalTexter

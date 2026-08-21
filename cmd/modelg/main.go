@@ -48,6 +48,7 @@ func run(ctx context.Context) error {
 		"",
 		"context",
 		"github.com/partite-ai/modelg/cmd/modelg",
+		"github.com/partite-ai/modelg",
 	}
 
 	for _, converter := range cnf.Converters {
@@ -151,17 +152,24 @@ func run(ctx context.Context) error {
 
 	for _, converter := range cnf.Converters {
 		ci := converterInfo{
-			Name: converter.Name,
+			Name:       converter.Name,
+			PackageMap: packageMap,
 		}
 
 		if converter.Scanner != "" {
-			if err := ci.loadScannerFunction(packageMap, converter.Scanner); err != nil {
+			if err := ci.loadScannerFunction(converter.Scanner); err != nil {
 				return err
 			}
 		}
 
 		if converter.Valuer != "" {
-			if err := ci.loadValuerFunction(packageMap, converter.Valuer); err != nil {
+			if err := ci.loadValuerFunction(converter.Valuer); err != nil {
+				return err
+			}
+		}
+
+		if converter.Texter != "" {
+			if err := ci.loadTexterFunction(converter.Texter); err != nil {
 				return err
 			}
 		}
@@ -204,7 +212,7 @@ func run(ctx context.Context) error {
 			return err
 		}
 
-		if err := querySet.CreateQueriesFile(currentPackage, model.Name, converters); err != nil {
+		if err := querySet.CreateQueriesFile(currentPackage, packageMap, model.Name, converters); err != nil {
 			return err
 		}
 	}
