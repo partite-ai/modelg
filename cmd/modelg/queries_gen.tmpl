@@ -9,6 +9,7 @@ import (
 var _ = strings.Contains
 var _ = fmt.Errorf
 var _ = errors.Join
+var _ = sql.Drivers
 
 type {{ .ModelName }}Queries struct {
   *generated{{ .ModelName }}Queries
