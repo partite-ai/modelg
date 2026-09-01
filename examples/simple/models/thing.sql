@@ -49,3 +49,7 @@ WHERE status = 1
 AND --<when :names.HasValues
   name IN (:names!)
 --endwhen
+
+
+-- name: ReplaceName
+UPDATE things SET name = :to WHERE name = :from

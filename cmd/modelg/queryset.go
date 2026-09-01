@@ -297,6 +297,10 @@ func processReturnType(name string, returnType types.Type, qualifier types.Quali
 		}
 	}
 
+	if nt, ok := returnType.(*types.Named); ok && nt.String() == "database/sql.Result" {
+		return rowTypeInfo{}, queryTypeExecResult, nil
+	}
+
 	switch typ := returnType.Underlying().(type) {
 	case *types.Named:
 		return processReturnType(name, typ.Underlying(), qualifier, converters)
@@ -355,11 +359,6 @@ func processReturnType(name string, returnType types.Type, qualifier types.Quali
 				},
 			},
 		}, queryTypeGet, nil
-	case *types.Interface:
-		if typ.String() == "database/sql.Result" {
-			return rowTypeInfo{}, queryTypeExecResult, nil
-		}
-		return rowTypeInfo{}, "", fmt.Errorf("method %q with two return values should return a struct, pointer, slice or basic type as the first value", name)
 	default:
 		return rowTypeInfo{}, "", fmt.Errorf("method %q with two return values should return a struct, pointer, slice or basic type as the first value", name)
 	}

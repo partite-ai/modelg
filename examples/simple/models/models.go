@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/partite-ai/modelg"
 	"github.com/partite-ai/optional"
@@ -23,4 +24,5 @@ type thingQueries interface {
 	FindByNameAndStatus(ctx context.Context, name optional.Optional[string], status optional.Optional[int]) ([]*Thing, error)
 	Delete(ctx context.Context, thingID int64) error
 	FindActiveByNames(ctx context.Context, names modelg.InValues) ([]*Thing, error)
+	ReplaceName(ctx context.Context, from string, to string) (sql.Result, error)
 }
