@@ -275,6 +275,9 @@ type scanTargetInfo struct {
 }
 
 func processReturnType(name string, returnType types.Type, qualifier types.Qualifier, converters []converterInfo) (rowType rowTypeInfo, queryType queryType, err error) {
+	if named, ok := returnType.(*types.Named); ok && named.Obj().Pkg() != nil && named.Obj().Pkg().Path() == "database/sql" && named.Obj().Name() == "Result" {
+		return rowTypeInfo{}, queryTypeExecResult, nil
+	}
 	for _, converter := range converters {
 		if converter.CanScan("", returnType) {
 			invExpr, err := converter.ScannerInvocation(qualifier, converters, returnType, "&result__")
