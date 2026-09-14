@@ -1,7 +1,6 @@
 package modelg
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -16,7 +15,7 @@ func (c InValues) SQLText(ctx *SQLTexterContext) (string, error) {
 			_, _ = buf.WriteString(", ")
 		}
 
-		_, _ = buf.WriteString(ctx.Vars.CreatePlaceholder(fmt.Sprintf("value%d", i), v))
+		_, _ = buf.WriteString(ctx.Vars.CreatePlaceholder("", v))
 	}
 	return buf.String(), nil
 }
@@ -162,7 +161,7 @@ func (c *inClause) appendClause(w *strings.Builder, vars QueryVariablesScope) {
 			_, _ = w.WriteString(", ")
 		}
 
-		_, _ = w.WriteString(vars.CreatePlaceholder(fmt.Sprintf("value%d", i), v))
+		_, _ = w.WriteString(vars.CreatePlaceholder("", v))
 	}
 	_, _ = w.WriteString(")")
 }
@@ -178,7 +177,7 @@ func (c *binOpClause) appendClause(w *strings.Builder, vars QueryVariablesScope)
 	_, _ = w.WriteString(" ")
 	_, _ = w.WriteString(c.op)
 	_, _ = w.WriteString(" ")
-	_, _ = w.WriteString(vars.CreatePlaceholder("value", c.v))
+	_, _ = w.WriteString(vars.CreatePlaceholder("", c.v))
 }
 
 type notClause struct {

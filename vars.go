@@ -7,7 +7,7 @@ type QueryVariablesScope interface {
 	// QueryArguments returns all arguments bound to the query.
 	QueryArguments() []any
 
-	// Creates a placeholder in a sql query for a variable with the given name.
+	// Creates a placeholder in a sql query for a variable with the given name. The name can be blank, in which case a unique name is generated.
 	CreatePlaceholder(name string, value any) string
 }
 
@@ -47,6 +47,12 @@ func (s *PostgresQueryVariablesScope) QueryArguments() []any {
 }
 
 func (s *PostgresQueryVariablesScope) CreatePlaceholder(name string, value any) string {
+	if name == "" {
+		idx := len(s.vars)
+		s.vars = append(s.vars, value)
+		return fmt.Sprintf("$%d", idx+1)
+	}
+
 	if idx, ok := s.nameToVar[name]; ok {
 		return fmt.Sprintf("$%d", idx+1)
 	}
