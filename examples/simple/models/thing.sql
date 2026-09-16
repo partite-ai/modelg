@@ -18,6 +18,7 @@ RETURNING *;
 
 -- name: FindBy
 SELECT * FROM things
+-- only include where clause when filter has values
 WHERE --<when :filter.HasValues
   :filter!
 --endwhen

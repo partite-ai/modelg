@@ -32,14 +32,13 @@ var SQLQueryParserParserStaticData struct {
 func sqlqueryparserParserInit() {
 	staticData := &SQLQueryParserParserStaticData
 	staticData.LiteralNames = []string{
-		"", "'--'", "':'", "", "", "", "", "'when'", "'<when'", "'+when'", "",
-		"", "", "", "", "", "'.'", "'!'",
+		"", "'--'", "", "'--when'", "'--<when'", "'--+when'", "", "':'", "",
+		"", "", "", "", "", "", "", "'.'", "'!'",
 	}
 	staticData.SymbolicNames = []string{
-		"", "STARTCOMMENT", "STARTEXPR", "EOL", "WS", "SQLTEXT", "STARTQUERY",
-		"STARTWHEN", "STARTCHOMPWHEN", "STARTJOINWHEN", "ENDWHEN", "ENDCOMMENT",
-		"RAWCOMMENT", "QUERY_NAME", "ENDQUERY", "IDENT", "IDENT_SEP", "IDENT_LITERAL",
-		"SPACE_EXPR", "WS_EXPR",
+		"", "STARTCOMMENT", "STARTQUERY", "STARTWHEN", "STARTCHOMPWHEN", "STARTJOINWHEN",
+		"ENDWHEN", "STARTEXPR", "EOL", "WS", "SQLTEXT", "RAWCOMMENT", "ENDCOMMENT",
+		"QUERY_NAME", "ENDQUERY", "IDENT", "IDENT_SEP", "IDENT_LITERAL", "WS_EXPR",
 	}
 	staticData.RuleNames = []string{
 		"querySet", "query", "sqlChunk", "sqlLine", "sqlFragment", "sqlText",
@@ -47,7 +46,7 @@ func sqlqueryparserParserInit() {
 	}
 	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 19, 116, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
+		4, 1, 18, 116, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
 		4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 1, 0, 4,
 		0, 22, 8, 0, 11, 0, 12, 0, 23, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2,
 		1, 2, 5, 2, 34, 8, 2, 10, 2, 12, 2, 37, 9, 2, 1, 2, 1, 2, 4, 2, 41, 8,
@@ -64,7 +63,7 @@ func sqlqueryparserParserInit() {
 		0, 14, 74, 1, 0, 0, 0, 16, 91, 1, 0, 0, 0, 18, 100, 1, 0, 0, 0, 20, 22,
 		3, 2, 1, 0, 21, 20, 1, 0, 0, 0, 22, 23, 1, 0, 0, 0, 23, 21, 1, 0, 0, 0,
 		23, 24, 1, 0, 0, 0, 24, 25, 1, 0, 0, 0, 25, 26, 5, 0, 0, 1, 26, 1, 1, 0,
-		0, 0, 27, 28, 5, 6, 0, 0, 28, 29, 5, 13, 0, 0, 29, 30, 3, 4, 2, 0, 30,
+		0, 0, 27, 28, 5, 2, 0, 0, 28, 29, 5, 13, 0, 0, 29, 30, 3, 4, 2, 0, 30,
 		3, 1, 0, 0, 0, 31, 41, 3, 6, 3, 0, 32, 34, 3, 8, 4, 0, 33, 32, 1, 0, 0,
 		0, 34, 37, 1, 0, 0, 0, 35, 33, 1, 0, 0, 0, 35, 36, 1, 0, 0, 0, 36, 38,
 		1, 0, 0, 0, 37, 35, 1, 0, 0, 0, 38, 41, 3, 12, 6, 0, 39, 41, 3, 14, 7,
@@ -72,22 +71,22 @@ func sqlqueryparserParserInit() {
 		1, 0, 0, 0, 42, 40, 1, 0, 0, 0, 42, 43, 1, 0, 0, 0, 43, 5, 1, 0, 0, 0,
 		44, 46, 3, 8, 4, 0, 45, 44, 1, 0, 0, 0, 46, 49, 1, 0, 0, 0, 47, 45, 1,
 		0, 0, 0, 47, 48, 1, 0, 0, 0, 48, 50, 1, 0, 0, 0, 49, 47, 1, 0, 0, 0, 50,
-		51, 5, 3, 0, 0, 51, 7, 1, 0, 0, 0, 52, 55, 3, 10, 5, 0, 53, 55, 3, 18,
-		9, 0, 54, 52, 1, 0, 0, 0, 54, 53, 1, 0, 0, 0, 55, 9, 1, 0, 0, 0, 56, 58,
-		5, 5, 0, 0, 57, 56, 1, 0, 0, 0, 58, 59, 1, 0, 0, 0, 59, 57, 1, 0, 0, 0,
-		59, 60, 1, 0, 0, 0, 60, 11, 1, 0, 0, 0, 61, 62, 5, 7, 0, 0, 62, 63, 3,
-		18, 9, 0, 63, 64, 5, 3, 0, 0, 64, 68, 3, 4, 2, 0, 65, 67, 3, 16, 8, 0,
+		51, 5, 8, 0, 0, 51, 7, 1, 0, 0, 0, 52, 55, 3, 18, 9, 0, 53, 55, 3, 10,
+		5, 0, 54, 52, 1, 0, 0, 0, 54, 53, 1, 0, 0, 0, 55, 9, 1, 0, 0, 0, 56, 58,
+		5, 10, 0, 0, 57, 56, 1, 0, 0, 0, 58, 59, 1, 0, 0, 0, 59, 57, 1, 0, 0, 0,
+		59, 60, 1, 0, 0, 0, 60, 11, 1, 0, 0, 0, 61, 62, 5, 3, 0, 0, 62, 63, 3,
+		18, 9, 0, 63, 64, 5, 8, 0, 0, 64, 68, 3, 4, 2, 0, 65, 67, 3, 16, 8, 0,
 		66, 65, 1, 0, 0, 0, 67, 70, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0, 68, 69, 1,
-		0, 0, 0, 69, 71, 1, 0, 0, 0, 70, 68, 1, 0, 0, 0, 71, 72, 5, 10, 0, 0, 72,
+		0, 0, 0, 69, 71, 1, 0, 0, 0, 70, 68, 1, 0, 0, 0, 71, 72, 5, 6, 0, 0, 72,
 		13, 1, 0, 0, 0, 73, 75, 3, 8, 4, 0, 74, 73, 1, 0, 0, 0, 75, 76, 1, 0, 0,
 		0, 76, 74, 1, 0, 0, 0, 76, 77, 1, 0, 0, 0, 77, 78, 1, 0, 0, 0, 78, 79,
-		5, 8, 0, 0, 79, 80, 3, 18, 9, 0, 80, 81, 5, 3, 0, 0, 81, 85, 3, 4, 2, 0,
+		5, 4, 0, 0, 79, 80, 3, 18, 9, 0, 80, 81, 5, 8, 0, 0, 81, 85, 3, 4, 2, 0,
 		82, 84, 3, 16, 8, 0, 83, 82, 1, 0, 0, 0, 84, 87, 1, 0, 0, 0, 85, 83, 1,
 		0, 0, 0, 85, 86, 1, 0, 0, 0, 86, 88, 1, 0, 0, 0, 87, 85, 1, 0, 0, 0, 88,
-		89, 5, 10, 0, 0, 89, 15, 1, 0, 0, 0, 90, 92, 3, 8, 4, 0, 91, 90, 1, 0,
-		0, 0, 92, 93, 1, 0, 0, 0, 93, 91, 1, 0, 0, 0, 93, 94, 1, 0, 0, 0, 94, 95,
-		1, 0, 0, 0, 95, 96, 5, 9, 0, 0, 96, 97, 3, 18, 9, 0, 97, 98, 5, 3, 0, 0,
-		98, 99, 3, 4, 2, 0, 99, 17, 1, 0, 0, 0, 100, 101, 5, 2, 0, 0, 101, 106,
+		89, 5, 6, 0, 0, 89, 15, 1, 0, 0, 0, 90, 92, 3, 8, 4, 0, 91, 90, 1, 0, 0,
+		0, 92, 93, 1, 0, 0, 0, 93, 91, 1, 0, 0, 0, 93, 94, 1, 0, 0, 0, 94, 95,
+		1, 0, 0, 0, 95, 96, 5, 5, 0, 0, 96, 97, 3, 18, 9, 0, 97, 98, 5, 8, 0, 0,
+		98, 99, 3, 4, 2, 0, 99, 17, 1, 0, 0, 0, 100, 101, 5, 7, 0, 0, 101, 106,
 		5, 15, 0, 0, 102, 103, 5, 16, 0, 0, 103, 105, 5, 15, 0, 0, 104, 102, 1,
 		0, 0, 0, 105, 108, 1, 0, 0, 0, 106, 104, 1, 0, 0, 0, 106, 107, 1, 0, 0,
 		0, 107, 113, 1, 0, 0, 0, 108, 106, 1, 0, 0, 0, 109, 111, 5, 17, 0, 0, 110,
@@ -133,24 +132,23 @@ func NewSQLQueryParser(input antlr.TokenStream) *SQLQueryParser {
 const (
 	SQLQueryParserEOF            = antlr.TokenEOF
 	SQLQueryParserSTARTCOMMENT   = 1
-	SQLQueryParserSTARTEXPR      = 2
-	SQLQueryParserEOL            = 3
-	SQLQueryParserWS             = 4
-	SQLQueryParserSQLTEXT        = 5
-	SQLQueryParserSTARTQUERY     = 6
-	SQLQueryParserSTARTWHEN      = 7
-	SQLQueryParserSTARTCHOMPWHEN = 8
-	SQLQueryParserSTARTJOINWHEN  = 9
-	SQLQueryParserENDWHEN        = 10
-	SQLQueryParserENDCOMMENT     = 11
-	SQLQueryParserRAWCOMMENT     = 12
+	SQLQueryParserSTARTQUERY     = 2
+	SQLQueryParserSTARTWHEN      = 3
+	SQLQueryParserSTARTCHOMPWHEN = 4
+	SQLQueryParserSTARTJOINWHEN  = 5
+	SQLQueryParserENDWHEN        = 6
+	SQLQueryParserSTARTEXPR      = 7
+	SQLQueryParserEOL            = 8
+	SQLQueryParserWS             = 9
+	SQLQueryParserSQLTEXT        = 10
+	SQLQueryParserRAWCOMMENT     = 11
+	SQLQueryParserENDCOMMENT     = 12
 	SQLQueryParserQUERY_NAME     = 13
 	SQLQueryParserENDQUERY       = 14
 	SQLQueryParserIDENT          = 15
 	SQLQueryParserIDENT_SEP      = 16
 	SQLQueryParserIDENT_LITERAL  = 17
-	SQLQueryParserSPACE_EXPR     = 18
-	SQLQueryParserWS_EXPR        = 19
+	SQLQueryParserWS_EXPR        = 18
 )
 
 // SQLQueryParser rules.
@@ -1024,8 +1022,8 @@ type ISqlFragmentContext interface {
 	GetParser() antlr.Parser
 
 	// Getter signatures
-	SqlText() ISqlTextContext
 	Expr() IExprContext
+	SqlText() ISqlTextContext
 
 	// IsSqlFragmentContext differentiates from other interfaces.
 	IsSqlFragmentContext()
@@ -1063,22 +1061,6 @@ func NewSqlFragmentContext(parser antlr.Parser, parent antlr.ParserRuleContext, 
 
 func (s *SqlFragmentContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *SqlFragmentContext) SqlText() ISqlTextContext {
-	var t antlr.RuleContext
-	for _, ctx := range s.GetChildren() {
-		if _, ok := ctx.(ISqlTextContext); ok {
-			t = ctx.(antlr.RuleContext)
-			break
-		}
-	}
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ISqlTextContext)
-}
-
 func (s *SqlFragmentContext) Expr() IExprContext {
 	var t antlr.RuleContext
 	for _, ctx := range s.GetChildren() {
@@ -1093,6 +1075,22 @@ func (s *SqlFragmentContext) Expr() IExprContext {
 	}
 
 	return t.(IExprContext)
+}
+
+func (s *SqlFragmentContext) SqlText() ISqlTextContext {
+	var t antlr.RuleContext
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(ISqlTextContext); ok {
+			t = ctx.(antlr.RuleContext)
+			break
+		}
+	}
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ISqlTextContext)
 }
 
 func (s *SqlFragmentContext) GetRuleContext() antlr.RuleContext {
@@ -1136,16 +1134,16 @@ func (p *SQLQueryParser) SqlFragment() (localctx ISqlFragmentContext) {
 	}
 
 	switch p.GetTokenStream().LA(1) {
-	case SQLQueryParserSQLTEXT:
-		{
-			p.SetState(52)
-			p.SqlText()
-		}
-
 	case SQLQueryParserSTARTEXPR:
 		{
-			p.SetState(53)
+			p.SetState(52)
 			p.Expr()
+		}
+
+	case SQLQueryParserSQLTEXT:
+		{
+			p.SetState(53)
+			p.SqlText()
 		}
 
 	default:
