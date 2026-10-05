@@ -45,7 +45,7 @@ func run(ctx context.Context) error {
 
 	// Load the Go packages
 	needPkgs := []string{
-		"",
+		".",
 		"context",
 		"github.com/partite-ai/modelg/cmd/modelg",
 		"github.com/partite-ai/modelg",
