@@ -32,6 +32,10 @@ func NewSqliteDB(pool SqlitePool) *SqliteDB {
 }
 
 func (db *SqliteDB) Unwrap(target any) bool {
+	if self, ok := target.(**SqliteDB); ok {
+		*self = db
+		return true
+	}
 	return unwrapOrDelegrate(db.pool, target)
 }
 

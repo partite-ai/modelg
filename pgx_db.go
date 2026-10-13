@@ -32,6 +32,10 @@ func NewPgxDB(pool PgxPool) *PgxDB {
 }
 
 func (db *PgxDB) Unwrap(target any) bool {
+	if self, ok := target.(**PgxDB); ok {
+		*self = db
+		return true
+	}
 	return unwrapOrDelegrate(db.pool, target)
 }
 
