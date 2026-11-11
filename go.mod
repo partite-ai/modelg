@@ -1,6 +1,6 @@
 module github.com/partite-ai/modelg
 
-go 1.26.0
+go 1.27.4
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.1
