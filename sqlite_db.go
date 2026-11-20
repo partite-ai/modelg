@@ -145,7 +145,9 @@ func (db *SqliteDB) prepareStatement(conn *sqlite.Conn, query string, args ...an
 		case bool:
 			stmt.BindBool(i+1, v)
 		case time.Time:
-			stmt.BindText(i+1, v.Format("2006-01-02 15:04:05.999999999-07:00"))
+			// Every time is written in UTC, so times compare as text in SQL
+			// whatever zone the host is in.
+			stmt.BindText(i+1, v.UTC().Format("2006-01-02 15:04:05.999999999-07:00"))
 		case nil:
 			stmt.BindNull(i + 1)
 		default:
